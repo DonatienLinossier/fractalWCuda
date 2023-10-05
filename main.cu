@@ -8,7 +8,7 @@
 #include "const.cpp"
 
 
-float max_Iteration =  100;
+float max_Iteration = MAX_ITERATION;
 long double  min_reel =  - 2.0;
 long double  max_reel =  2.0;
 long double  min_imaginary =  - 2.0;
@@ -68,8 +68,9 @@ __global__ void mandelbrot(uchar3* dev_gpuPixels, int width, int height, long do
         dev_gpuPixels[y * width + x] = { 0, 0, 0 };
     }
     else {
-        //printf("%d", iterations);
-        dev_gpuPixels[y * width + x] = { static_cast<unsigned char>(255 - (double)(max_Iteration - iterations) / max_Iteration * 255), 0 /*static_cast<unsigned char>((double)iterations / max_Iteration * 255)*/,   static_cast<unsigned char>(25 + (double)(max_Iteration - iterations) / max_Iteration * 25) };
+        dev_gpuPixels[y * width + x] = { static_cast<unsigned char>(R_MIN + (R_MAX - R_MIN) * R_REVERSE - (double)(max_Iteration - iterations) / max_Iteration * (R_MAX - R_MIN)),
+                                         static_cast<unsigned char>(G_MIN + (G_MAX - G_MIN) * G_REVERSE - (double)(max_Iteration - iterations) / max_Iteration * (G_MAX - G_MIN)),
+                                         static_cast<unsigned char>(B_MIN + (B_MAX - B_MIN) * B_REVERSE - (double)(max_Iteration - iterations) / max_Iteration * (B_MAX - B_MIN))};
     }
 }
 
@@ -107,7 +108,12 @@ __global__ void juliaSet(uchar3* dev_gpuPixels, int width, int height, Complex n
     }
     else {
         //printf("%d", iterations);
-        dev_gpuPixels[y * width + x] = { static_cast<unsigned char>(255-(double)(max_Iteration - iterations) / max_Iteration * 255), 0 /*static_cast<unsigned char>((double)iterations / max_Iteration * 255)*/,   static_cast<unsigned char>(25 + (double)(max_Iteration-iterations) / max_Iteration * 25)};
+        dev_gpuPixels[y * width + x] = { static_cast<unsigned char>(R_MIN + (R_MAX-R_MIN) * R_REVERSE - (double)(max_Iteration - iterations) / max_Iteration * (R_MAX - R_MIN)),
+                                         static_cast<unsigned char>(G_MIN + (G_MAX - G_MIN) * G_REVERSE - (double)(max_Iteration - iterations) / max_Iteration * (G_MAX-G_MIN)),
+                                         static_cast<unsigned char>(B_MIN + (B_MAX-B_MIN) * B_REVERSE - (double)(max_Iteration - iterations) / max_Iteration * (B_MAX - B_MIN))};
+                                         
+            
+            //static_cast<unsigned char>(25 + (double)(max_Iteration-iterations) / max_Iteration * 25)};
     }
 }
 
@@ -129,7 +135,6 @@ __global__ void gaussianBlurInPlace(uchar3* image, int width, int height)
     {
         float3 result = make_float3(0.0f, 0.0f, 0.0f);
 
-        // Iterate over the Gaussian kernel
         for (int i = -kernelSize / 2; i <= kernelSize / 2; i++)
         {
             for (int j = -kernelSize / 2; j <= kernelSize / 2; j++)
@@ -198,7 +203,6 @@ void call_gaussianBlur(uchar3* dev_gpuPixels, int width, int height) {
 
 int getDisplayFromGpu(uchar3* hostPixels, uchar3* dev_gpuPixels, int width, int height) {
 
-    // Your CUDA code here
     cudaError_t err = cudaMemcpy(hostPixels, dev_gpuPixels, width * sizeof(uchar3) * height, cudaMemcpyDeviceToHost);
 
     if (err != cudaSuccess) {
@@ -247,7 +251,6 @@ int main(int argc, char* argv[]) {
 
     //printf("Done");
 
-    // Main loop
     bool quit = false;
     SDL_Event events;
     SDL_Point MousePosition;
@@ -291,14 +294,12 @@ int main(int argc, char* argv[]) {
                     max_reel -= (max_reel - min_reel) / 100;
                     min_imaginary += (max_imaginary - min_imaginary) / 100;
                     max_imaginary -= (max_imaginary - min_imaginary) / 100;
-                    //max_Iteration *= 1.005;
                 }
                 if (keyCode == SDLK_e) {
                     min_reel -= (max_reel - min_reel) / 100;
                     max_reel += (max_reel - min_reel) / 100;
                     min_imaginary -= (max_imaginary - min_imaginary) / 100;
                     max_imaginary += (max_imaginary - min_imaginary) / 100;
-                    //max_Iteration -= 1.005;
                 }
             }
         }
@@ -309,9 +310,12 @@ int main(int argc, char* argv[]) {
 
         double zoom_level = 1.0 / (fabs(max_reel - min_reel) < fabs(max_imaginary - min_imaginary) ?
             fabs(max_reel - min_reel) : fabs(max_imaginary - min_imaginary));
-        printf("\n %d", (int)calculate_max_iter(zoom_level, max_Iteration));
-        call_julia(dev_gpuPixels, WIDTH, HEIGHT, number, min_reel, max_reel, min_imaginary, max_imaginary, (int)calculate_max_iter(zoom_level, max_Iteration));
-        //call_mandelbrot(dev_gpuPixels, WIDTH, HEIGHT, min_reel, max_reel, min_imaginary, max_imaginary, (int)calculate_max_iter(zoom_level, max_Iteration));
+        //printf("\n %d", (int)calculate_max_iter(zoom_level, max_Iteration));
+        if(MODE==0)
+            call_julia(dev_gpuPixels, WIDTH, HEIGHT, number, min_reel, max_reel, min_imaginary, max_imaginary, (int)calculate_max_iter(zoom_level, max_Iteration));
+        else if(MODE==1)
+            call_mandelbrot(dev_gpuPixels, WIDTH, HEIGHT, min_reel, max_reel, min_imaginary, max_imaginary, (int)calculate_max_iter(zoom_level, max_Iteration));
+
         //call_gaussianBlur(dev_gpuPixels, WIDTH, HEIGHT);
         getDisplayFromGpu(hostPixels, dev_gpuPixels, WIDTH, HEIGHT);
         SDL_UpdateTexture(pTexture, NULL, hostPixels, WIDTH * sizeof(uchar3));
@@ -319,7 +323,6 @@ int main(int argc, char* argv[]) {
         SDL_RenderPresent(pRenderer);
 
     }
-        // Cleanup and exit
         SDL_DestroyRenderer(pRenderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
