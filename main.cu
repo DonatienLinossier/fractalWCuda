@@ -301,6 +301,12 @@ int main(int argc, char* argv[]) {
                     min_imaginary -= (max_imaginary - min_imaginary) / 100;
                     max_imaginary += (max_imaginary - min_imaginary) / 100;
                 }
+                if (keyCode == SDLK_r) {
+                    min_reel = -2.0;
+                    max_reel = 2.0;
+                    min_imaginary = -2.0;
+                    max_imaginary = 2.0;
+                }
             }
         }
 

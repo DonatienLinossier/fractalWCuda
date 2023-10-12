@@ -1,7 +1,7 @@
 #define WIDTH 1800
 #define HEIGHT 1000
 
-#define MAX_ITERATION 100
+#define MAX_ITERATION 150
 
 
 #define MODE 1//0-> Julia ; 1 -> Mandelbrot
